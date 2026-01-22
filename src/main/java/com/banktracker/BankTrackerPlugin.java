@@ -1,6 +1,7 @@
 package com.banktracker;
 
 import javax.inject.Inject;
+
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.ItemContainerChanged;
@@ -8,11 +9,18 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemMapping;
+import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
+
+import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Objects;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 
 @Slf4j
@@ -25,18 +33,36 @@ public class BankTrackerPlugin extends Plugin
 	private Client client;
 
 	@Inject
+	private ClientToolbar clientToolbar;
+
+	private BankTrackerPanel panel;
+	private NavigationButton navButton;
+
+	@Inject
 	ItemManager itemManager;
 
 	@Override
 	protected void startUp() throws Exception
 	{
-		initailiseCSV();
+		initializeCSV();
+//		panel = new BankTrackerPanel(this);
+//
+//		final BufferedImage icon = ImageUtil.getResourceStreamFromClass(BankTrackerPlugin.class, "panel_icon.png");
+//
+//		navButton = NavigationButton.builder()
+//				.tooltip("Bank Value")
+//				.priority(5)
+//				.panel(panel)
+//				.icon(icon)
+//				.build();
+//
+//		clientToolbar.addNavigation(navButton);
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
-		log.info("Example stopped!");
+		clientToolbar.removeNavigation(navButton);
 	}
 
 	//bank id: 95
@@ -45,139 +71,42 @@ public class BankTrackerPlugin extends Plugin
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
-		int containerId = event.getContainerId();
-		log.info("ItemContainerChanged: " + containerId);
-		// Only care about bank, inventory, equipment
-		if (containerId != InventoryID.BANK.getId()
-				&& containerId != InventoryID.INVENTORY.getId()
-				&& containerId != InventoryID.EQUIPMENT.getId())
+		for (Item item : event.getItemContainer().getItems())
 		{
-			return;
+			if (itemManager.canonicalize(item.getId()) != item.getId() || item.getId() == -1)
+			{
+				continue;
+			}
+			int itemPrice = itemManager.getItemPrice(item.getId());
+			ItemComposition itemDefinition = client.getItemDefinition(item.getId());
+
+			writeToCsv(item.getId(),
+					itemDefinition.getName(),
+					item.getQuantity(),
+					itemPrice);
 		}
+		log.info("bank dumping complete");
 
-		ItemContainer container = event.getItemContainer();
-		if (container == null)
-		{
-			return;
-		}
-
-		boolean isBank = containerId == InventoryID.BANK.getId();
-
-		for (Item item : container.getItems())
-		{
-			int itemId = item.getId();
-
-			//Skip empty slots
-			if (itemId == -1)
-			{
-				continue;
-			}
-
-			ItemComposition comp = itemManager.getItemComposition(itemId);
-
-			// BANK-ONLY filters
-			if (isBank) {
-				if (comp.getPlaceholderTemplateId() != -1) {
-					continue;
-				}
-
-				//Skip bank fillers
-				if (itemId == ItemID.BANK_FILLER) {
-					continue;
-				}
-			}
-
-			//Skip invalid quantities
-			if (item.getQuantity() <= 0)
-			{
-				continue;
-			}
-
-			//Canonicalize (maps untradeables → tradeable base)
-			int canonicalItemId = itemManager.canonicalize(itemId);
-			ItemComposition canonicalComp =
-					itemManager.getItemComposition(canonicalItemId);
-
-			//Coins: always include
-			if (itemId == 995)
-			{
-				log.info("found coins!"+ canonicalComp.getName() + item.getQuantity());
-				writeToCsv(
-						itemId, "Coins",	item.getQuantity()
-				);
-				continue;
-			}
-
-			//Only skip if the *canonical* item is not tradeable
-			if (!canonicalComp.isTradeable())
-			{
-				continue;
-			}
-
-			//Persist canonical item
-			writeToCsv(canonicalItemId, canonicalComp.getName(), item.getQuantity()
-			);
-		}
 	}
-//		if (container != null)
-//		{
-//			int itemId = item.getId();
-//			for (Item item : container.getItems())
-//				// 1️⃣ Skip empty slots
-//				if (itemId == -1)
-//				{
-//					continue;
-//				}
-//
-//			// 2️⃣ Skip bank fillers (before canonicalize)
-//			if (itemId == ItemID.BANK_FILLER)
-//			{
-//				continue;
-//			}
-//			{
-//				String itemName = itemManager.getItemComposition(item.getId()).getName();
-//				//if (itemManager.getItemComposition(item.getId()).getName().equals("Coins"))
-//				if (item.getId() == 995)
-//				{
-//					writeToCsv(item.getId(), itemName, item.getQuantity());
-//					log.info("item id: " + item.getId());
-//				}
-//				//log.info("Item id: {}", item);
-//				if (item.getId() != -1 && itemManager.getItemComposition(item.getId()).isTradeable())
-//				{
-//					if (!Objects.equals(itemName, "Bank filler")){
-//						//int itemPrice = itemManager.getItemPrice(item.getId()); //high alch price
-////						log.info("Item ID: {}, Item name: {}, Item quantity {}", item.getId(), itemName, item.getQuantity());
-//						writeToCsv(item.getId(), itemName, item.getQuantity());
-//					}
-//				}
-//				if (!itemManager.getItemComposition(item.getId()).isTradeable())
-//				{
-//
-//					int canonicalItemId = itemManager.canonicalize(itemId);
-//					ItemComposition comp = itemManager.getItemComposition(canonicalItemId);
-//
-//					writeToCsv(canonicalItemId, comp.getName(), item.getQuantity());
-//				}
-//			}
-//		}
-//	}
 
-	private void initailiseCSV() {
-		String csvFilePath = "src/test/resources/output.csv";
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvFilePath))) {
-			writer.write("Item ID,Item Name,Item Quantity");
+	private static final Path CSV_PATH = Paths.get("src", "main", "resources", "output.csv");
+
+	private void initializeCSV() throws IOException {
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(CSV_PATH.toFile()))) {
+			writer.write("item_id,item_name,quantity,price");
 			writer.newLine();
 		} catch (IOException e) {
 			log.error("Failed to write to CSV file", e);
 		}
 	}
 
-	private void writeToCsv(int itemId, String itemName, int itemQuantity)
+	private void writeToCsv(int itemId, String name, int quantity, int price)
 	{
-		String csvFilePath = "src/test/resources/output.csv";
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(csvFilePath, true))) {
-			writer.write(String.format("%d,%s,%d%n", itemId, itemName, itemQuantity));
+		log.info("Writing CSV file");
+		boolean exists = Files.exists(CSV_PATH);
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(CSV_PATH.toFile(), true))) {
+			writer.write(String.format("%d,%s,%d,%d", itemId, name, quantity, price));
+			writer.newLine();
 		} catch (IOException e) {
 			log.error("Failed to write to CSV file", e);
 		}
