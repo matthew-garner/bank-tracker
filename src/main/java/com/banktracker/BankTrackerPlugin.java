@@ -35,7 +35,7 @@ public class BankTrackerPlugin extends Plugin
 	@Inject
 	private ClientToolbar clientToolbar;
 
-	private BankTrackerPanel panel;
+	//private BankTrackerPanel panel;
 	private NavigationButton navButton;
 
 	@Inject
@@ -71,21 +71,21 @@ public class BankTrackerPlugin extends Plugin
 	@Subscribe
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
-		for (Item item : event.getItemContainer().getItems())
-		{
-			if (itemManager.canonicalize(item.getId()) != item.getId() || item.getId() == -1)
-			{
-				continue;
-			}
-			int itemPrice = itemManager.getItemPrice(item.getId());
-			ItemComposition itemDefinition = client.getItemDefinition(item.getId());
-
-			writeToCsv(item.getId(),
-					itemDefinition.getName(),
-					item.getQuantity(),
-					itemPrice);
-		}
-		log.info("bank dumping complete");
+//		for (Item item : event.getItemContainer().getItems())
+//		{
+//			if (itemManager.canonicalize(item.getId()) != item.getId() || item.getId() == -1)
+//			{
+//				continue;
+//			}
+//			int itemPrice = itemManager.getItemPrice(item.getId());
+//			ItemComposition itemDefinition = client.getItemDefinition(item.getId());
+//
+//			writeToCsv(item.getId(),
+//					itemDefinition.getName(),
+//					item.getQuantity(),
+//					itemPrice);
+//		}
+//		log.info("bank dumping complete");
 
 	}
 
@@ -102,7 +102,7 @@ public class BankTrackerPlugin extends Plugin
 
 	private void writeToCsv(int itemId, String name, int quantity, int price)
 	{
-		log.info("Writing CSV file");
+		//log.info("Writing CSV file");
 		boolean exists = Files.exists(CSV_PATH);
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(CSV_PATH.toFile(), true))) {
 			writer.write(String.format("%d,%s,%d,%d", itemId, name, quantity, price));

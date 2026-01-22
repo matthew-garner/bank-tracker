@@ -6,26 +6,7 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
-public class BankTrackerPanel extends PluginPanel
-{
-    private final JButton refreshButton = new JButton("Refresh");
 
-    public BankTrackerPanel(BankTrackerPlugin bankTrackerPlugin)
-    {
-        setLayout(new BorderLayout());
-
-        JLabel title = new JLabel("Bank Tracker");
-        add(title, BorderLayout.NORTH);
-
-        JPanel content = new JPanel();
-        content.add(refreshButton);
-
-        add(content, BorderLayout.CENTER);
-    }
-
-    public JButton getRefreshButton()
-    {
-        return refreshButton;
-    }
-}

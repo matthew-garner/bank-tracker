@@ -1,2 +1,2 @@
-# Example
-An example greeter plugin
+# Bank Traker
+A plugin that tracks the value of your bank over time
